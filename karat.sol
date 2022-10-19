@@ -23,11 +23,12 @@ contract Karat is Context, IERC20, IERC20Metadata, Ownable {
     uint256 private _totalSupply;
     uint256 private _DECIMALFACTOR = 10 ** decimals();
 
+    uint256 private _fixedSupply = 2 * (10 ** 9) * _DECIMALFACTOR;
+
     //Initializa the basic Parameters: Name, Token Symbol, TotalSupply Number: 2B, First Mint 10%, 0.2B
     constructor(string memory name_, string memory symbol_) {
         _name = name_;
         _symbol = symbol_;
-        _totalSupply = 18 * (10 ** 8) * _DECIMALFACTOR;
         _mint(msg.sender, 2 * (10 ** 8)* _DECIMALFACTOR);
 
     }
@@ -37,16 +38,34 @@ contract Karat is Context, IERC20, IERC20Metadata, Ownable {
         _mint(to, amount);
     }
 
-    function totalSupply() public view virtual override returns (uint256) {
+    //Retuen the amount of Token currently Minted
+    function totalMinted() public view virtual returns (uint256) {
         return _totalSupply;
     }
 
+    //Return the max amount of Token Supply
+    function totalSupply() public view virtual override returns (uint256) {
+        return _fixedSupply;
+    }
+
+    //Only Owner can Transfer
     function transfer(address to, uint256 amount) public virtual override onlyOwner returns (bool) {
         address owner = _msgSender();
         _transfer(owner, to, amount);
         return true;
     }
 
+    //Record the Logs with Memo
+    event TransferWithMessage(address indexed from, address indexed to, string message);
+    function transferWithMeg(address to, uint256 amount, string memory meg) public virtual onlyOwner returns (bool) {
+        address owner = _msgSender();
+        _transfer(owner, to, amount);
+        emit TransferWithMessage(owner, to, meg);
+        return true;
+    }
+
+
+    //Basic Interfaces of ERC20
     function name() public view virtual override returns (string memory) {
         return _name;
     }
@@ -119,10 +138,11 @@ contract Karat is Context, IERC20, IERC20Metadata, Ownable {
         return true;
     }
 
-
+    //Newly Mint cannot exceed the Max supply
     function _mint(address account, uint256 amount) internal virtual {
         require(account != address(0), "ERC20: mint to the zero address");
-
+        require((amount + _totalSupply) <= _fixedSupply, "ERC20: mint more than totalSupply");
+ 
         _beforeTokenTransfer(address(0), account, amount);
 
         _totalSupply += amount;
@@ -158,6 +178,7 @@ contract Karat is Context, IERC20, IERC20Metadata, Ownable {
             }
         }
     }
+    
     //Burn the token
     function _burn(address account, uint256 amount) internal virtual {
         require(account != address(0), "ERC20: burn from the zero address");
